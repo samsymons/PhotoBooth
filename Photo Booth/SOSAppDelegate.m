@@ -6,6 +6,8 @@
 //  Copyright (c) 2014 Sam Symons. All rights reserved.
 //
 
+@import AssetsLibrary;
+
 #import "SOSAppDelegate.h"
 #import "SOSCameraViewController.h"
 
@@ -17,8 +19,8 @@
     
     SOSCameraViewController *cameraViewController = [[SOSCameraViewController alloc] init];
     self.window.rootViewController = cameraViewController;
-    
     self.window.backgroundColor = [UIColor whiteColor];
+    
     [self.window makeKeyAndVisible];
     return YES;
 }

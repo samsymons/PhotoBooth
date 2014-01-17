@@ -6,16 +6,31 @@
 //  Copyright (c) 2014 Sam Symons. All rights reserved.
 //
 
+@import AssetsLibrary;
+
 #import "SOSCameraViewController.h"
+#import "SOSPhotosViewController.h"
+#import "SOSImageManager.h"
 
 #define TOTAL_PHOTOS_TO_TAKE 5
 
-dispatch_queue_t metadataHandlingQueue() {
+dispatch_queue_t imageCaptureQueue() {
     static dispatch_once_t once;
     static dispatch_queue_t queue;
     
     dispatch_once(&once, ^{
-        queue = dispatch_queue_create("com.samsymons.photobooth.metadata-handling-queue", DISPATCH_QUEUE_SERIAL);
+        queue = dispatch_queue_create("com.samsymons.photobooth.image-capture-queue", DISPATCH_QUEUE_SERIAL);
+    });
+    
+    return queue;
+}
+
+dispatch_queue_t metadataProcessingQueue() {
+    static dispatch_once_t once;
+    static dispatch_queue_t queue;
+    
+    dispatch_once(&once, ^{
+        queue = dispatch_queue_create("com.samsymons.photobooth.metadata-processing-queue", DISPATCH_QUEUE_SERIAL);
     });
     
     return queue;
@@ -28,27 +43,27 @@ dispatch_queue_t metadataHandlingQueue() {
 
 @property (nonatomic, strong) AVCaptureDeviceInput *captureDeviceInput;
 @property (nonatomic, strong) AVCaptureMetadataOutput *metadataOutput;
-@property (nonatomic, strong) CALayer *faceDetectionIndicationLayer;
+@property (nonatomic, strong) AVCaptureStillImageOutput *stillImageOutput;
 
+@property (nonatomic, strong) CALayer *faceDetectionIndicationLayer;
 @property (nonatomic, strong) AVCaptureVideoPreviewLayer *previewLayer;
 
-@property (nonatomic, strong) NSTimer *captureTimer;
-
 @property (nonatomic, assign, getter = isCapturingPhotos) BOOL capturingPhotos;
+@property (nonatomic, strong) NSTimer *captureTimer;
 @property (nonatomic, strong) UIView *flashView;
 @property (nonatomic, assign) NSUInteger numberOfPhotosTaken;
 
 - (AVCaptureDevice *)frontCamera;
 
+- (void)checkCameraAccessStatus;
+
 - (void)beginCapturingPhotos;
 - (void)stopCapturingPhotos;
 
-- (void)showFaceDetectionLayer;
-- (void)hideFaceDetectionLayer;
-
 - (void)capturePhoto;
-
 - (void)flashScreen;
+
+- (void)presentPhotosViewController;
 
 @end
 
@@ -67,6 +82,8 @@ dispatch_queue_t metadataHandlingQueue() {
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    
+    [self checkCameraAccessStatus];
     
     // Set up the capture session:
     
@@ -91,9 +108,17 @@ dispatch_queue_t metadataHandlingQueue() {
     if ([[self captureSession] canAddOutput:self.metadataOutput])
     {
         [[self captureSession] addOutput:self.metadataOutput];
+        
+        self.metadataOutput.metadataObjectTypes = @[AVMetadataObjectTypeFace];
     }
     
-    self.metadataOutput.metadataObjectTypes = @[AVMetadataObjectTypeFace];
+    // Add the still image output:
+    
+    if ([[self captureSession] canAddOutput:self.stillImageOutput])
+    {
+        [[self stillImageOutput] setOutputSettings:@{AVVideoCodecKey : AVVideoCodecJPEG}];
+        [[self captureSession] addOutput:self.stillImageOutput];
+    }
     
     // Add the preview layer and start capturing:
     
@@ -115,10 +140,20 @@ dispatch_queue_t metadataHandlingQueue() {
     if (!_metadataOutput)
     {
         _metadataOutput = [[AVCaptureMetadataOutput alloc] init];
-        [_metadataOutput setMetadataObjectsDelegate:self queue:metadataHandlingQueue()];
+        [_metadataOutput setMetadataObjectsDelegate:self queue:metadataProcessingQueue()];
     }
     
     return _metadataOutput;
+}
+
+- (AVCaptureStillImageOutput *)stillImageOutput
+{
+    if (!_stillImageOutput)
+    {
+        _stillImageOutput = [[AVCaptureStillImageOutput alloc] init];
+    }
+    
+    return _stillImageOutput;
 }
 
 - (CALayer *)faceDetectionIndicationLayer
@@ -153,10 +188,19 @@ dispatch_queue_t metadataHandlingQueue() {
     return nil;
 }
 
+- (void)checkCameraAccessStatus
+{
+    NSString *mediaType = AVMediaTypeVideo;
+	[AVCaptureDevice requestAccessForMediaType:mediaType completionHandler:^(BOOL granted) {
+		if (!granted)
+		{
+			NSLog(@"Cannot access the camera!");
+		}
+	}];
+}
+
 - (void)beginCapturingPhotos
 {
-    NSLog(@"Hold still... capturing photos!");
-    
     self.flashView = [[UIView alloc] initWithFrame:self.view.frame];
     self.flashView.alpha = 0.0;
     self.flashView.backgroundColor = [UIColor whiteColor];
@@ -170,22 +214,44 @@ dispatch_queue_t metadataHandlingQueue() {
 - (void)stopCapturingPhotos
 {
     [[self captureTimer] invalidate];
-    [[self flashView] removeFromSuperview];
+    self.captureDevice = nil;
     
-    NSLog(@"All done!");
+    [[self flashView] removeFromSuperview];
 }
 
 - (void)capturePhoto
 {
-    // TODO: Actually capture frame.
-    
-    [self flashScreen];
-    
-    self.numberOfPhotosTaken++;
-    if (self.numberOfPhotosTaken >= TOTAL_PHOTOS_TO_TAKE)
-    {
-        [self stopCapturingPhotos];
-    }
+    dispatch_async(imageCaptureQueue(), ^{
+        AVCaptureConnection *connection = [[self stillImageOutput] connectionWithMediaType:AVMediaTypeVideo];
+        
+        [connection setVideoOrientation:[[(AVCaptureVideoPreviewLayer *)[self previewLayer] connection] videoOrientation]];
+        
+		[[self stillImageOutput] captureStillImageAsynchronouslyFromConnection:connection completionHandler:^(CMSampleBufferRef imageDataSampleBuffer, NSError *error) {
+            
+			if (imageDataSampleBuffer)
+			{
+				NSData *imageData = [AVCaptureStillImageOutput jpegStillImageNSDataRepresentation:imageDataSampleBuffer];
+                UIImage *image = [UIImage imageWithData:imageData];
+                
+                [SOSImageManager serializeImage:image];
+			}
+            else
+            {
+                NSLog(@"Failed to capture image, with error: %@", error);
+            }
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self flashScreen];
+                
+                self.numberOfPhotosTaken++;
+                if (self.numberOfPhotosTaken >= TOTAL_PHOTOS_TO_TAKE)
+                {
+                    [self stopCapturingPhotos];
+                    [self presentPhotosViewController];
+                }
+            });
+		}];
+	});
 }
 
 - (void)flashScreen
@@ -193,9 +259,19 @@ dispatch_queue_t metadataHandlingQueue() {
     dispatch_async(dispatch_get_main_queue(), ^{
         self.flashView.alpha = 1.0;
         
-        [UIView animateWithDuration:0.45 delay:0.1 options:UIViewAnimationOptionCurveEaseOut animations:^{
+        [UIView animateWithDuration:0.55 delay:0.1 options:UIViewAnimationOptionCurveEaseOut animations:^{
             self.flashView.alpha = 0.0;
         } completion:nil];
+    });
+}
+
+- (void)presentPhotosViewController
+{
+    SOSPhotosViewController *photosViewController = [[SOSPhotosViewController alloc] init];
+    UINavigationController *photosNavigationController = [[UINavigationController alloc] initWithRootViewController:photosViewController];
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self presentViewController:photosNavigationController animated:YES completion:nil];
     });
 }
 
@@ -213,6 +289,11 @@ dispatch_queue_t metadataHandlingQueue() {
         }
         else
         {
+            if (self.faceDetectionIndicationLayer.opacity == 0.0)
+            {
+                self.faceDetectionIndicationLayer.opacity = 1.0;
+            }
+            
             self.faceDetectionIndicationLayer.frame = transformedFaceMetadataObject.bounds;
         }
     });
