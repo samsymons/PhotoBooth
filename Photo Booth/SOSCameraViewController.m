@@ -285,6 +285,9 @@ dispatch_queue_t metadataProcessingQueue() {
     AVMetadataFaceObject *transformedFaceMetadata = (AVMetadataFaceObject *)[[self previewLayer] transformedMetadataObjectForMetadataObject:faceMetadata];
     
     dispatch_async(dispatch_get_main_queue(), ^{
+        // Before a face goes off-screen, we get a metadata object with a frame of 0.
+        // Instead of setting the detection layer to that frame, it's nicer to just hide it.
+        
         if (transformedFaceMetadata.bounds.size.width == 0.0 && transformedFaceMetadata.bounds.size.height == 0.0)
         {
             self.faceDetectionIndicationLayer.opacity = 0.0;
