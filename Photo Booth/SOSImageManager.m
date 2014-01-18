@@ -24,6 +24,8 @@ dispatch_queue_t imageProcessingQueue() {
 
 @interface SOSImageManager ()
 
++ (CIContext *)imageContext;
+
 + (NSString *)imageDirectoryPath;
 + (NSURL *)randomImageURL;
 + (NSString *)randomFileName;
@@ -33,46 +35,25 @@ dispatch_queue_t imageProcessingQueue() {
  */
 + (NSArray *)allImagePaths;
 
++ (UIImage *)imageWithSepiaFilter:(UIImage *)image;
+
 @end
 
 @implementation SOSImageManager
 
 + (BOOL)serializeImage:(UIImage *)image
 {
-    UIImage *thumbnail = [image resizedImageToFitInSize:CGSizeMake(200.0f, 200.0f) scaleIfSmaller:NO];
+    UIImage *thumbnail = [image imageScaledToFillSize:CGSizeMake(200.0, 200.0)];
     
-    // Apply a Core Image filter:
+    // Filter the images:
     
-    CIContext *context = [CIContext contextWithOptions:nil];
-    
-    CIImage *mainImage = [CIImage imageWithCGImage:[image CGImage]];
-    CIImage *thumbnailImage = [CIImage imageWithCGImage:[thumbnail CGImage]];
-    
-    // Filter the main image:
-    
-    CIFilter *mainSepiaFilter = [CIFilter filterWithName:@"CISepiaTone" keysAndValues: kCIInputImageKey, mainImage, @"inputIntensity", @0.7, nil];
-    CIImage *mainOutputImage = [mainSepiaFilter outputImage];
-    
-    CGImageRef filteredCGImage = [context createCGImage:mainOutputImage fromRect:[mainOutputImage extent]];
-    UIImage *filteredImage = [UIImage imageWithCGImage:filteredCGImage];
-    
-    CGImageRelease(filteredCGImage);
-    
-    // Filter the thumbnail:
-    
-    CIFilter *thumbnailSepiaFilter = [CIFilter filterWithName:@"CISepiaTone" keysAndValues: kCIInputImageKey, thumbnailImage, @"inputIntensity", @0.7, nil];
-    CIImage *thumbnailOutputImage = [thumbnailSepiaFilter outputImage];
-    
-    CGImageRef filteredCGImageThumbnail = [context createCGImage:thumbnailOutputImage fromRect:[thumbnailOutputImage extent]];
-    UIImage *filteredThumbnail = [UIImage imageWithCGImage:filteredCGImageThumbnail];
-    
-    CGImageRelease(filteredCGImageThumbnail);
+    UIImage *filteredImage = [SOSImageManager imageWithSepiaFilter:image];
+    UIImage *filteredThumbnail = [SOSImageManager imageWithSepiaFilter:thumbnail];
     
     // Save the images to disk:
     
     NSURL *imageURL = [SOSImageManager randomImageURL];
-    NSString *imageURLString = [imageURL absoluteString];
-    NSURL *thumbnailURL = [SOSImageManager thumbnailPathForImage:imageURLString];
+    NSURL *thumbnailURL = [SOSImageManager thumbnailPathForImage:[imageURL absoluteString]];
     
     NSData *imageData = UIImageJPEGRepresentation(filteredImage, 1.0);
     NSData *thumbnailData = UIImageJPEGRepresentation(filteredThumbnail, 1.0);
@@ -81,17 +62,7 @@ dispatch_queue_t imageProcessingQueue() {
     NSError *thumbnailWriteError = nil;
     
     [imageData writeToURL:imageURL options:NSDataWritingAtomic error:&writeError];
-    [thumbnailData writeToURL:thumbnailURL options:NSDataWritingAtomic error:&writeError];
-    
-    if (writeError)
-    {
-        NSLog(@"Failed to write image to disk: %@", writeError);
-    }
-    
-    if (thumbnailWriteError)
-    {
-        NSLog(@"Failed to write thumbnail to disk: %@", thumbnailWriteError);
-    }
+    [thumbnailData writeToURL:thumbnailURL options:NSDataWritingAtomic error:&thumbnailWriteError];
     
     return (writeError == nil);
 }
@@ -128,6 +99,18 @@ dispatch_queue_t imageProcessingQueue() {
 }
 
 #pragma mark - Private
+
++ (CIContext *)imageContext
+{
+    static dispatch_once_t once;
+    static CIContext *context;
+    
+    dispatch_once(&once, ^{
+        context = [CIContext contextWithOptions:nil];
+    });
+    
+    return context;
+}
 
 + (NSString *)imageDirectoryPath
 {
@@ -179,6 +162,21 @@ dispatch_queue_t imageProcessingQueue() {
     }];
     
     return sortedContents;
+}
+
++ (UIImage *)imageWithSepiaFilter:(UIImage *)image
+{
+    CIImage *imageToFilter = [CIImage imageWithCGImage:[image CGImage]];
+    
+    CIFilter *thumbnailSepiaFilter = [CIFilter filterWithName:@"CISepiaTone" keysAndValues: kCIInputImageKey, imageToFilter, @"inputIntensity", @0.7, nil];
+    CIImage *thumbnailOutputImage = [thumbnailSepiaFilter outputImage];
+    
+    CGImageRef filteredCGImage = [[SOSImageManager imageContext] createCGImage:thumbnailOutputImage fromRect:[thumbnailOutputImage extent]];
+    UIImage *filteredImage = [UIImage imageWithCGImage:filteredCGImage];
+    
+    CGImageRelease(filteredCGImage);
+    
+    return filteredImage;
 }
 
 @end
