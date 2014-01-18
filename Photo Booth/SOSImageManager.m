@@ -41,30 +41,46 @@ dispatch_queue_t imageProcessingQueue() {
 
 @implementation SOSImageManager
 
-+ (BOOL)serializeImage:(UIImage *)image
++ (void)serializeImage:(UIImage *)image completion:(SOSSerializationCompletionHandler)completion
 {
-    UIImage *thumbnail = [image imageScaledToFillSize:CGSizeMake(200.0, 200.0)];
-    
-    // Filter the images:
-    
-    UIImage *filteredImage = [SOSImageManager imageWithSepiaFilter:image];
-    UIImage *filteredThumbnail = [SOSImageManager imageWithSepiaFilter:thumbnail];
-    
-    // Save the images to disk:
-    
-    NSURL *imageURL = [SOSImageManager randomImageURL];
-    NSURL *thumbnailURL = [SOSImageManager thumbnailPathForImage:[imageURL absoluteString]];
-    
-    NSData *imageData = UIImageJPEGRepresentation(filteredImage, 1.0);
-    NSData *thumbnailData = UIImageJPEGRepresentation(filteredThumbnail, 1.0);
-    
-    NSError *writeError = nil;
-    NSError *thumbnailWriteError = nil;
-    
-    [imageData writeToURL:imageURL options:NSDataWritingAtomic error:&writeError];
-    [thumbnailData writeToURL:thumbnailURL options:NSDataWritingAtomic error:&thumbnailWriteError];
-    
-    return (writeError == nil);
+    dispatch_async(imageProcessingQueue(), ^{
+        UIImage *thumbnail = [image imageScaledToFillSize:CGSizeMake(200.0, 200.0)];
+        
+        // Filter the images:
+        
+        UIImage *filteredImage = [SOSImageManager imageWithSepiaFilter:image];
+        UIImage *filteredThumbnail = [SOSImageManager imageWithSepiaFilter:thumbnail];
+        
+        // Save the images to disk:
+        
+        NSURL *imageURL = [SOSImageManager randomImageURL];
+        NSURL *thumbnailURL = [SOSImageManager thumbnailPathForImage:[imageURL absoluteString]];
+        
+        NSData *imageData = UIImageJPEGRepresentation(filteredImage, 1.0);
+        NSData *thumbnailData = UIImageJPEGRepresentation(filteredThumbnail, 1.0);
+        
+        NSError *writeError = nil;
+        NSError *thumbnailWriteError = nil;
+        
+        [imageData writeToURL:imageURL options:NSDataWritingAtomic error:&writeError];
+        [thumbnailData writeToURL:thumbnailURL options:NSDataWritingAtomic error:&thumbnailWriteError];
+        
+        if (completion)
+        {
+            if (writeError)
+            {
+                completion(writeError);
+            }
+            else if (thumbnailWriteError)
+            {
+                completion(thumbnailWriteError);
+            }
+            else
+            {
+                completion(nil);
+            }
+        }
+    });
 }
 
 + (NSArray *)imagePaths;

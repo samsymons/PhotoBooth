@@ -9,6 +9,7 @@
 #import <Foundation/Foundation.h>
 
 typedef void(^SOSImagesCompletionHandler)(NSArray *imagePaths, NSError *error);
+typedef void(^SOSSerializationCompletionHandler)(NSError *error);
 
 @interface SOSImageManager : NSObject
 
@@ -18,7 +19,7 @@ typedef void(^SOSImagesCompletionHandler)(NSArray *imagePaths, NSError *error);
  
  @param image The image to serialize.
  */
-+ (BOOL)serializeImage:(UIImage *)image;
++ (void)serializeImage:(UIImage *)image completion:(SOSSerializationCompletionHandler)completion;
 
 /**
  Returns the paths of the images stored in the documents directory.

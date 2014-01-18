@@ -238,21 +238,22 @@ dispatch_queue_t metadataProcessingQueue() {
         
         [self flashScreen];
 		[[self stillImageOutput] captureStillImageAsynchronouslyFromConnection:connection completionHandler:^(CMSampleBufferRef imageDataSampleBuffer, NSError *error) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                self.numberOfPhotosTaken++;
-                if (self.numberOfPhotosTaken >= TOTAL_PHOTOS_TO_TAKE)
-                {
-                    [self stopCapturingPhotos];
-                    [self presentPhotosViewController];
-                }
-            });
+            self.numberOfPhotosTaken++;
             
 			if (imageDataSampleBuffer)
 			{
 				NSData *imageData = [AVCaptureStillImageOutput jpegStillImageNSDataRepresentation:imageDataSampleBuffer];
                 UIImage *image = [UIImage imageWithData:imageData];
                 
-                [SOSImageManager serializeImage:image];
+                [SOSImageManager serializeImage:image completion:^(NSError *error) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        if (self.numberOfPhotosTaken >= TOTAL_PHOTOS_TO_TAKE)
+                        {
+                            [self stopCapturingPhotos];
+                            [self presentPhotosViewController];
+                        }
+                    });
+                }];
 			}
             else
             {
