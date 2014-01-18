@@ -6,6 +6,8 @@
 //  Copyright (c) 2014 Sam Symons. All rights reserved.
 //
 
+@import AssetsLibrary;
+
 #import "SOSPhotosViewController.h"
 #import "SOSPhotosLayout.h"
 #import "SOSPhotoCell.h"
@@ -16,6 +18,7 @@ NSString *const SOSPhotoCellReuseIdentifier = @"SOSPhotoCellReuseIdentifier";
 @interface SOSPhotosViewController ()
 
 @property (nonatomic, strong) NSArray *imagePaths;
+@property (nonatomic, strong) NSIndexPath *selectedIndexPath;
 
 - (void)dismissPhotosViewController;
 - (void)handleLongPress:(UILongPressGestureRecognizer *)gestureRecognizer;
@@ -77,11 +80,7 @@ NSString *const SOSPhotoCellReuseIdentifier = @"SOSPhotoCellReuseIdentifier";
     
     if (indexPath)
     {
-        // NSURL *thumbnailPath = self.imagePaths[indexPath.row];
-        // NSURL *imageURL = [SOSImageManager imagePathForThumbnail:[thumbnailPath absoluteString]];
-        
-        // NSData *imageData = [NSData dataWithContentsOfURL:imageURL];
-        // UIImage *image = [[UIImage alloc] initWithData:imageData];
+        self.selectedIndexPath = indexPath;
         
         dispatch_async(dispatch_get_main_queue(), ^{
             UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle:nil
@@ -97,12 +96,47 @@ NSString *const SOSPhotoCellReuseIdentifier = @"SOSPhotoCellReuseIdentifier";
 
 - (void)deleteImage
 {
-    
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSURL *thumbnailURL = self.imagePaths[self.selectedIndexPath.row];
+        NSURL *imageURL = [SOSImageManager imagePathForThumbnail:[thumbnailURL absoluteString]];
+        
+        [[NSFileManager defaultManager] removeItemAtURL:thumbnailURL error:nil];
+        [[NSFileManager defaultManager] removeItemAtURL:imageURL error:nil];
+        
+        self.imagePaths = [SOSImageManager imageThumbnailPaths];
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [[self collectionView] deleteItemsAtIndexPaths:@[self.selectedIndexPath]];
+        });
+    });
 }
 
 - (void)saveImageToCameraRoll
 {
+    NSURL *thumbnailPath = self.imagePaths[self.selectedIndexPath.row];
+    NSURL *imageURL = [SOSImageManager imagePathForThumbnail:[thumbnailPath absoluteString]];
     
+    NSData *imageData = [NSData dataWithContentsOfURL:imageURL];
+    UIImage *image = [UIImage imageWithData:imageData];
+    
+    ALAssetsLibrary *assetsLibrary = [[ALAssetsLibrary alloc] init];
+    [assetsLibrary writeImageToSavedPhotosAlbum:[image CGImage] orientation:ALAssetOrientationUp completionBlock:nil];
+}
+
+#pragma mark - UIActionSheetDelegate
+
+- (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    switch (buttonIndex)
+    {
+        case 0:
+            [self deleteImage];
+            break;
+        case 1:
+            [self saveImageToCameraRoll];
+        default:
+            break;
+    }
 }
 
 #pragma mark - UICollectionViewDataSource
