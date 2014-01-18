@@ -182,7 +182,7 @@ dispatch_queue_t imageProcessingQueue() {
 
 + (UIImage *)imageWithSepiaFilter:(UIImage *)image
 {
-    CIImage *imageToFilter = [CIImage imageWithCGImage:[image CGImage]];
+    CIImage *imageToFilter = [[CIImage alloc] initWithImage:image];
     
     CIFilter *thumbnailSepiaFilter = [CIFilter filterWithName:@"CISepiaTone" keysAndValues: kCIInputImageKey, imageToFilter, @"inputIntensity", @0.7, nil];
     CIImage *thumbnailOutputImage = [thumbnailSepiaFilter outputImage];

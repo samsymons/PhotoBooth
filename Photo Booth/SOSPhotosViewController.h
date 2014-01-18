@@ -8,6 +8,6 @@
 
 #import <UIKit/UIKit.h>
 
-@interface SOSPhotosViewController : UICollectionViewController <UIGestureRecognizerDelegate>
+@interface SOSPhotosViewController : UICollectionViewController <UIActionSheetDelegate, UIGestureRecognizerDelegate>
 
 @end

@@ -20,6 +20,9 @@ NSString *const SOSPhotoCellReuseIdentifier = @"SOSPhotoCellReuseIdentifier";
 - (void)dismissPhotosViewController;
 - (void)handleLongPress:(UILongPressGestureRecognizer *)gestureRecognizer;
 
+- (void)deleteImage;
+- (void)saveImageToCameraRoll;
+
 @end
 
 @implementation SOSPhotosViewController
@@ -74,17 +77,32 @@ NSString *const SOSPhotoCellReuseIdentifier = @"SOSPhotoCellReuseIdentifier";
     
     if (indexPath)
     {
-        NSURL *thumbnailPath = self.imagePaths[indexPath.row];
-        NSURL *imageURL = [SOSImageManager imagePathForThumbnail:[thumbnailPath absoluteString]];
+        // NSURL *thumbnailPath = self.imagePaths[indexPath.row];
+        // NSURL *imageURL = [SOSImageManager imagePathForThumbnail:[thumbnailPath absoluteString]];
         
-        NSData *imageData = [NSData dataWithContentsOfURL:imageURL];
-        UIImage *image = [[UIImage alloc] initWithData:imageData];
+        // NSData *imageData = [NSData dataWithContentsOfURL:imageURL];
+        // UIImage *image = [[UIImage alloc] initWithData:imageData];
         
         dispatch_async(dispatch_get_main_queue(), ^{
-            UIActivityViewController *activityViewController = [[UIActivityViewController alloc] initWithActivityItems:@[image] applicationActivities:nil];
-            [self presentViewController:activityViewController animated:YES completion:nil];
+            UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle:nil
+                                                                     delegate:self
+                                                            cancelButtonTitle:@"Cancel"
+                                                       destructiveButtonTitle:@"Delete"
+                                                            otherButtonTitles:@"Save to Camera Roll", nil];
+            
+            [actionSheet showInView:self.view];
         });
     }
+}
+
+- (void)deleteImage
+{
+    
+}
+
+- (void)saveImageToCameraRoll
+{
+    
 }
 
 #pragma mark - UICollectionViewDataSource

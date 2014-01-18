@@ -234,6 +234,8 @@ dispatch_queue_t metadataProcessingQueue() {
     dispatch_async(imageCaptureQueue(), ^{
         AVCaptureConnection *connection = [[self stillImageOutput] connectionWithMediaType:AVMediaTypeVideo];
         
+        [connection setVideoOrientation:AVCaptureVideoOrientationPortrait];
+        
         [self flashScreen];
         
 		[[self stillImageOutput] captureStillImageAsynchronouslyFromConnection:connection completionHandler:^(CMSampleBufferRef imageDataSampleBuffer, NSError *error) {
