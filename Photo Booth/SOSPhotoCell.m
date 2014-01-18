@@ -22,7 +22,7 @@
     {
         self.backgroundColor = [UIColor colorWithWhite:0.1 alpha:1.0];
         self.layer.borderWidth = 1.0;
-        self.layer.borderColor = [[UIColor colorWithWhite:1.0 alpha:0.25] CGColor];
+        self.layer.borderColor = [[UIColor colorWithWhite:1.0 alpha:0.2] CGColor];
         
         _imageView = [[UIImageView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, frame.size.width, frame.size.height)];
         _imageView.contentMode = UIViewContentModeScaleAspectFill;

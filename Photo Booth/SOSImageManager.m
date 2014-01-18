@@ -11,12 +11,12 @@
 #import "SOSImageManager.h"
 #import "UIImage+Resize.h"
 
-dispatch_queue_t imageFilterQueue() {
+dispatch_queue_t imageProcessingQueue() {
     static dispatch_once_t once;
     static dispatch_queue_t queue;
     
     dispatch_once(&once, ^{
-        queue = dispatch_queue_create("com.samsymons.photobooth.image-filter-queue", DISPATCH_QUEUE_SERIAL);
+        queue = dispatch_queue_create("com.samsymons.photobooth.image-processing-queue", DISPATCH_QUEUE_SERIAL);
     });
     
     return queue;
@@ -39,18 +39,49 @@ dispatch_queue_t imageFilterQueue() {
 
 + (BOOL)serializeImage:(UIImage *)image
 {
-    NSError *writeError = nil;
-    NSError *thumbnailWriteError = nil;
+    UIImage *thumbnail = [image resizedImageToFitInSize:CGSizeMake(200.0f, 200.0f) scaleIfSmaller:NO];
     
-    NSData *imageData = UIImageJPEGRepresentation(image, 1.0);
-    NSData *scaledImageData = UIImageJPEGRepresentation([image resizedImageToFitInSize:CGSizeMake(200.0f, 200.0f) scaleIfSmaller:NO], 1.0);
+    // Apply a Core Image filter:
+    
+    CIContext *context = [CIContext contextWithOptions:nil];
+    
+    CIImage *mainImage = [CIImage imageWithCGImage:[image CGImage]];
+    CIImage *thumbnailImage = [CIImage imageWithCGImage:[thumbnail CGImage]];
+    
+    // Filter the main image:
+    
+    CIFilter *mainSepiaFilter = [CIFilter filterWithName:@"CISepiaTone" keysAndValues: kCIInputImageKey, mainImage, @"inputIntensity", @0.7, nil];
+    CIImage *mainOutputImage = [mainSepiaFilter outputImage];
+    
+    CGImageRef filteredCGImage = [context createCGImage:mainOutputImage fromRect:[mainOutputImage extent]];
+    UIImage *filteredImage = [UIImage imageWithCGImage:filteredCGImage];
+    
+    CGImageRelease(filteredCGImage);
+    
+    // Filter the thumbnail:
+    
+    CIFilter *thumbnailSepiaFilter = [CIFilter filterWithName:@"CISepiaTone" keysAndValues: kCIInputImageKey, thumbnailImage, @"inputIntensity", @0.7, nil];
+    CIImage *thumbnailOutputImage = [thumbnailSepiaFilter outputImage];
+    
+    CGImageRef filteredCGImageThumbnail = [context createCGImage:thumbnailOutputImage fromRect:[thumbnailOutputImage extent]];
+    UIImage *filteredThumbnail = [UIImage imageWithCGImage:filteredCGImageThumbnail];
+    
+    CGImageRelease(filteredCGImageThumbnail);
+    
+    // Save the images to disk:
     
     NSURL *imageURL = [SOSImageManager randomImageURL];
     NSString *imageURLString = [imageURL absoluteString];
     NSURL *thumbnailURL = [SOSImageManager thumbnailPathForImage:imageURLString];
     
+    NSData *imageData = UIImageJPEGRepresentation(filteredImage, 1.0);
+    NSData *thumbnailData = UIImageJPEGRepresentation(filteredThumbnail, 1.0);
+    
+    NSError *writeError = nil;
+    NSError *thumbnailWriteError = nil;
+    
     [imageData writeToURL:imageURL options:NSDataWritingAtomic error:&writeError];
-    [scaledImageData writeToURL:thumbnailURL options:NSDataWritingAtomic error:&writeError];
+    [thumbnailData writeToURL:thumbnailURL options:NSDataWritingAtomic error:&writeError];
     
     if (writeError)
     {

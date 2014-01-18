@@ -14,6 +14,7 @@ typedef void(^SOSImagesCompletionHandler)(NSArray *imagePaths, NSError *error);
 
 /**
  Serializes an image to disk, along with a 100×100 thumbnail for it.
+ The image is stored using a sepia Core Image filter.
  
  @param image The image to serialize.
  */
