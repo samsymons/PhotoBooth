@@ -48,9 +48,6 @@ dispatch_queue_t metadataProcessingQueue() {
 @property (nonatomic, strong) CALayer *faceDetectionIndicationLayer;
 @property (nonatomic, strong) AVCaptureVideoPreviewLayer *previewLayer;
 
-@property (nonatomic, assign) NSUInteger currentlyDetectedFace;
-@property (nonatomic, strong) NSTimer *faceDetectionTimer;
-
 @property (nonatomic, assign, getter = isCapturingPhotos) BOOL capturingPhotos;
 @property (nonatomic, strong) NSTimer *captureTimer;
 @property (nonatomic, strong) UIView *flashView;
@@ -59,8 +56,6 @@ dispatch_queue_t metadataProcessingQueue() {
 - (AVCaptureDevice *)frontCamera;
 
 - (void)checkCameraAccessStatus;
-
-- (void)faceDetected;
 
 - (void)beginCapturingPhotos;
 - (void)stopCapturingPhotos;
@@ -204,11 +199,6 @@ dispatch_queue_t metadataProcessingQueue() {
 	}];
 }
 
-- (void)faceDetected
-{
-    NSLog(@"Face detected for long enough!");
-}
-
 - (void)beginCapturingPhotos
 {
     self.flashView = [[UIView alloc] initWithFrame:self.view.frame];
@@ -224,8 +214,11 @@ dispatch_queue_t metadataProcessingQueue() {
 - (void)stopCapturingPhotos
 {
     [[self captureTimer] invalidate];
-    self.captureDevice = nil;
+    self.captureTimer = nil;
     
+    self.capturingPhotos = NO;
+    
+    [[self captureSession] removeOutput:self.metadataOutput];
     [[self flashView] removeFromSuperview];
 }
 
@@ -290,25 +283,6 @@ dispatch_queue_t metadataProcessingQueue() {
 {
     AVMetadataFaceObject *faceMetadata = [metadataObjects firstObject];
     AVMetadataFaceObject *transformedFaceMetadata = (AVMetadataFaceObject *)[[self previewLayer] transformedMetadataObjectForMetadataObject:faceMetadata];
-    
-    /*
-    if (self.currentlyDetectedFace != faceMetadata.faceID)
-    {
-        NSLog(@"Detected new face!");
-        
-        self.currentlyDetectedFace = faceMetadata.faceID;
-        
-        if ([[self faceDetectionTimer] isValid])
-        {
-            [[self faceDetectionTimer] invalidate];
-        }
-        
-        dispatch_async(dispatch_get_main_queue(), ^{
-            self.faceDetectionTimer = [NSTimer timerWithTimeInterval:3.0 target:self selector:@selector(faceDetected) userInfo:nil repeats:NO];
-            [[NSRunLoop currentRunLoop] addTimer:self.faceDetectionTimer forMode:NSDefaultRunLoopMode];
-        });
-    }
-     */
     
     dispatch_async(dispatch_get_main_queue(), ^{
         if (transformedFaceMetadata.bounds.size.width == 0.0 && transformedFaceMetadata.bounds.size.height == 0.0)
