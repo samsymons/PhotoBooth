@@ -53,6 +53,8 @@ dispatch_queue_t metadataProcessingQueue() {
 @property (nonatomic, strong) UIView *flashView;
 @property (nonatomic, assign) NSUInteger numberOfPhotosTaken;
 
+@property (nonatomic, assign) BOOL preventPhotosFromBeingTaken;
+
 - (AVCaptureDevice *)frontCamera;
 
 - (void)checkCameraAccessStatus;
@@ -128,6 +130,18 @@ dispatch_queue_t metadataProcessingQueue() {
     [[[self view] layer] addSublayer:self.previewLayer];
     
     [[self captureSession] startRunning];
+}
+
+- (void)viewDidAppear:(BOOL)animated
+{
+    [super viewDidAppear:animated];
+    
+    double delayInSeconds = 1.5;
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+    
+    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+        self.preventPhotosFromBeingTaken = NO;
+    });
 }
 
 - (BOOL)prefersStatusBarHidden
@@ -217,8 +231,9 @@ dispatch_queue_t metadataProcessingQueue() {
     self.captureTimer = nil;
     
     self.capturingPhotos = NO;
+    self.numberOfPhotosTaken = 0;
+    self.preventPhotosFromBeingTaken = YES;
     
-    [[self captureSession] removeOutput:self.metadataOutput];
     [[self flashView] removeFromSuperview];
 }
 
@@ -281,6 +296,11 @@ dispatch_queue_t metadataProcessingQueue() {
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputMetadataObjects:(NSArray *)metadataObjects fromConnection:(AVCaptureConnection *)connection
 {
+    if (self.preventPhotosFromBeingTaken)
+    {
+        return;
+    }
+    
     AVMetadataFaceObject *faceMetadata = [metadataObjects firstObject];
     AVMetadataFaceObject *transformedFaceMetadata = (AVMetadataFaceObject *)[[self previewLayer] transformedMetadataObjectForMetadataObject:faceMetadata];
     
