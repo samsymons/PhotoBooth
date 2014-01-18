@@ -132,13 +132,11 @@
 				4B9B70C418887DDB00C937A2 /* SOSAppDelegate.m */,
 				4B9B70E318887DED00C937A2 /* SOSCameraViewController.h */,
 				4B9B70E418887DED00C937A2 /* SOSCameraViewController.m */,
-				4B9B70E61888D4C200C937A2 /* SOSPhotosViewController.h */,
-				4B9B70E71888D4C200C937A2 /* SOSPhotosViewController.m */,
-				4B9B70F61889B56F00C937A2 /* Categories */,
-				4B9B70EF1888E4CE00C937A2 /* Photos */,
 				4B9B70E91888D84100C937A2 /* SOSImageManager.h */,
 				4B9B70EA1888D84100C937A2 /* SOSImageManager.m */,
-				4B9B70C618887DDB00C937A2 /* Images.xcassets */,
+				4B9B70EF1888E4CE00C937A2 /* Photos Collection View */,
+				4B9B70F61889B56F00C937A2 /* Categories */,
+				4B9B70FE188A44FC00C937A2 /* Assets */,
 				4B9B70BB18887DDB00C937A2 /* Supporting Files */,
 			);
 			path = "Photo Booth";
@@ -174,15 +172,17 @@
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
-		4B9B70EF1888E4CE00C937A2 /* Photos */ = {
+		4B9B70EF1888E4CE00C937A2 /* Photos Collection View */ = {
 			isa = PBXGroup;
 			children = (
+				4B9B70E61888D4C200C937A2 /* SOSPhotosViewController.h */,
+				4B9B70E71888D4C200C937A2 /* SOSPhotosViewController.m */,
 				4B9B70EC1888E37F00C937A2 /* SOSPhotosLayout.h */,
 				4B9B70ED1888E37F00C937A2 /* SOSPhotosLayout.m */,
 				4B9B70F01888E63400C937A2 /* SOSPhotoCell.h */,
 				4B9B70F11888E63400C937A2 /* SOSPhotoCell.m */,
 			);
-			name = Photos;
+			name = "Photos Collection View";
 			sourceTree = "<group>";
 		};
 		4B9B70F61889B56F00C937A2 /* Categories */ = {
@@ -192,6 +192,14 @@
 				4B9B70FC1889D11600C937A2 /* UIImage+Resize.m */,
 			);
 			name = Categories;
+			sourceTree = "<group>";
+		};
+		4B9B70FE188A44FC00C937A2 /* Assets */ = {
+			isa = PBXGroup;
+			children = (
+				4B9B70C618887DDB00C937A2 /* Images.xcassets */,
+			);
+			name = Assets;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -418,10 +426,17 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_STATIC_ANALYZER_MODE = deep;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_OBJC_EXPLICIT_OWNERSHIP_TYPE = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Photo Booth/Photo Booth-Prefix.pch";
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				GCC_WARN_PEDANTIC = YES;
 				INFOPLIST_FILE = "Photo Booth/Photo Booth-Info.plist";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				RUN_CLANG_STATIC_ANALYZER = YES;
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -431,10 +446,17 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_STATIC_ANALYZER_MODE = deep;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_OBJC_EXPLICIT_OWNERSHIP_TYPE = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Photo Booth/Photo Booth-Prefix.pch";
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				GCC_WARN_PEDANTIC = YES;
 				INFOPLIST_FILE = "Photo Booth/Photo Booth-Info.plist";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				RUN_CLANG_STATIC_ANALYZER = YES;
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;

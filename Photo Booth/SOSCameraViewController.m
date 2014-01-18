@@ -234,31 +234,29 @@ dispatch_queue_t metadataProcessingQueue() {
     dispatch_async(imageCaptureQueue(), ^{
         AVCaptureConnection *connection = [[self stillImageOutput] connectionWithMediaType:AVMediaTypeVideo];
         
-        // [connection setVideoOrientation:[[(AVCaptureVideoPreviewLayer *)[self previewLayer] connection] videoOrientation]];
-        
         [self flashScreen];
+        
 		[[self stillImageOutput] captureStillImageAsynchronouslyFromConnection:connection completionHandler:^(CMSampleBufferRef imageDataSampleBuffer, NSError *error) {
             self.numberOfPhotosTaken++;
             
-			if (imageDataSampleBuffer)
+			if (!imageDataSampleBuffer)
 			{
-				NSData *imageData = [AVCaptureStillImageOutput jpegStillImageNSDataRepresentation:imageDataSampleBuffer];
-                UIImage *image = [UIImage imageWithData:imageData];
-                
-                [SOSImageManager serializeImage:image completion:^(NSError *error) {
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        if (self.numberOfPhotosTaken >= TOTAL_PHOTOS_TO_TAKE)
-                        {
-                            [self stopCapturingPhotos];
-                            [self presentPhotosViewController];
-                        }
-                    });
-                }];
-			}
-            else
-            {
                 NSLog(@"Failed to capture image, with error: %@", error);
+                return;
             }
+            
+			NSData *imageData = [AVCaptureStillImageOutput jpegStillImageNSDataRepresentation:imageDataSampleBuffer];
+            UIImage *image = [UIImage imageWithData:imageData];
+            
+            [SOSImageManager serializeImage:image completion:^(NSError *error) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    if (self.numberOfPhotosTaken >= TOTAL_PHOTOS_TO_TAKE)
+                    {
+                        [self stopCapturingPhotos];
+                        [self presentPhotosViewController];
+                    }
+                });
+            }];
 		}];
 	});
 }

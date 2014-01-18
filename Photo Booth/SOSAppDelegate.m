@@ -18,6 +18,7 @@
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     
     SOSCameraViewController *cameraViewController = [[SOSCameraViewController alloc] init];
+    
     self.window.rootViewController = cameraViewController;
     self.window.backgroundColor = [UIColor whiteColor];
     
