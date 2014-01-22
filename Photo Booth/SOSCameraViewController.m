@@ -87,49 +87,55 @@ dispatch_queue_t metadataProcessingQueue() {
     
     [self checkCameraAccessStatus];
     
-    // Set up the capture session:
-    
-    self.captureSession = [[AVCaptureSession alloc] init];
-    self.captureDevice = [self frontCamera];
-    
-    self.captureSession.sessionPreset = AVCaptureSessionPresetHigh;
-    self.numberOfPhotosTaken = 0;
-    
-    // Add the device input:
-    
-    NSError *deviceInputError;
-    self.captureDeviceInput = [[AVCaptureDeviceInput alloc] initWithDevice:self.captureDevice error:&deviceInputError];
-    
-    if ([[self captureSession] canAddInput:self.captureDeviceInput])
-    {
-        [[self captureSession] addInput:self.captureDeviceInput];
-    }
-    
-    // Add the metadata output:
-    
-    if ([[self captureSession] canAddOutput:self.metadataOutput])
-    {
-        [[self captureSession] addOutput:self.metadataOutput];
+    dispatch_async(metadataProcessingQueue(), ^{
+        // Set up the capture session:
         
-        self.metadataOutput.metadataObjectTypes = @[AVMetadataObjectTypeFace];
-    }
-    
-    // Add the still image output:
-    
-    if ([[self captureSession] canAddOutput:self.stillImageOutput])
-    {
-        [[self stillImageOutput] setOutputSettings:@{AVVideoCodecKey : AVVideoCodecJPEG}];
-        [[self captureSession] addOutput:self.stillImageOutput];
-    }
-    
-    // Add the preview layer and start capturing:
-    
-    self.previewLayer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:self.captureSession];
-    self.previewLayer.frame = self.view.frame;
-    
-    [[[self view] layer] addSublayer:self.previewLayer];
-    
-    [[self captureSession] startRunning];
+        self.captureSession = [[AVCaptureSession alloc] init];
+        self.captureDevice = [self frontCamera];
+        
+        self.captureSession.sessionPreset = AVCaptureSessionPresetHigh;
+        self.numberOfPhotosTaken = 0;
+        
+        // Add the device input:
+        
+        NSError *deviceInputError;
+        self.captureDeviceInput = [[AVCaptureDeviceInput alloc] initWithDevice:self.captureDevice error:&deviceInputError];
+        
+        if ([[self captureSession] canAddInput:self.captureDeviceInput])
+        {
+            [[self captureSession] addInput:self.captureDeviceInput];
+        }
+        
+        // Add the metadata output:
+        
+        if ([[self captureSession] canAddOutput:self.metadataOutput])
+        {
+            [[self captureSession] addOutput:self.metadataOutput];
+            
+            self.metadataOutput.metadataObjectTypes = @[AVMetadataObjectTypeFace];
+        }
+        
+        // Add the still image output:
+        
+        if ([[self captureSession] canAddOutput:self.stillImageOutput])
+        {
+            [[self stillImageOutput] setOutputSettings:@{AVVideoCodecKey : AVVideoCodecJPEG}];
+            [[self captureSession] addOutput:self.stillImageOutput];
+        }
+        
+        // Add the preview layer and start capturing:
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self.previewLayer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:self.captureSession];
+            self.previewLayer.frame = self.view.frame;
+            
+            [[[self view] layer] addSublayer:self.previewLayer];
+            
+            dispatch_async(metadataProcessingQueue(), ^{
+                [[self captureSession] startRunning];
+            });
+        });
+    });
 }
 
 - (void)viewDidAppear:(BOOL)animated
